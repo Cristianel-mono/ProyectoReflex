@@ -1,7 +1,59 @@
 import reflex as rx
-from ..backend.backend import State, Customer
+
+from ProyectoFinal.views.FormulariosProducto import bolsa_form , rollo_form , rolloProviAgro_form , servicio_form
+from ..backend.backend import States_pagina, Customer , product_types
 from ..components.form_field import form_field
 from ..components.status_badges import status_badge
+from ..views.form_mapping import product_form_mapping
+ 
+#Funcion para restaurar formulaior 
+def base_form():
+    return rx.fragment(
+        # Selector para el tipo de producto
+        rx.vstack(
+            rx.select(
+                product_types,  # Opciones de productos
+                value=States_pagina.selected_product_type,
+               on_change=lambda e: States_pagina.set_selected_product_type(str(e.target.value)),  # Asegurar string
+            ),
+            margin_bottom="1em",
+        
+        ),
+        
+        # Mostrar tipo de producto seleccionado
+        rx.cond(
+            States_pagina.selected_product_type != "",  
+            rx.text(f"Tipo de producto seleccionado: {type(States_pagina.selected_product_type)}"), 
+            rx.text("Seleccione un tipo de producto.", italic=True, color="gray")
+        ),
+        
+        # Mostrar el formulario actual desde el backend
+        rx.cond(
+            States_pagina.selected_product_type != "",
+            
+            rx.form.root(
+                States_pagina.selected_form,  # Renderiza el formulario desde el state
+                rx.flex(
+                    rx.form.submit(
+                        rx.button("Enviar", color_scheme="blue"),
+                        as_child=True,
+                    ),
+                    justify="space-between",
+                    width="100%",
+                    padding_top="1em",
+                ),
+                on_submit=States_pagina.add_customer_to_db,  
+            ),
+            rx.text("Seleccione un tipo de producto para continuar.", italic=True),  
+        ),
+        max_width="450px",
+        padding="1.5em",
+        border=f"2px solid {rx.color('accent', 7)}",
+        border_radius="25px",
+    )
+
+   
+
 
 
 def show_customer(user: Customer):
@@ -28,7 +80,7 @@ def show_customer(user: Customer):
                 update_customer_dialog(user),
                 rx.icon_button(
                     rx.icon("trash-2", size=22),
-                    on_click=lambda: State.delete_customer(getattr(user, "id")),
+                    on_click=lambda: States_pagina.delete_customer(getattr(user, "id")),
                     size="2",
                     variant="solid",
                     color_scheme="red",
@@ -38,7 +90,6 @@ def show_customer(user: Customer):
         style={"_hover": {"bg": rx.color("gray", 3)}},
         align="center",
     )
-
 
 def add_customer_button() -> rx.Component:
     return rx.dialog.root(
@@ -50,22 +101,20 @@ def add_customer_button() -> rx.Component:
             ),
         ),
         rx.dialog.content(
-            rx.hstack( #para alienar verticalmente 
+            rx.hstack(  # para alinear horizontalmente
                 rx.badge(
-                    rx.icon(tag="file", size=34), #Muestra el icono de documentos
+                    rx.icon(tag="file", size=34),  # Muestra el icono de documentos
                     color_scheme="grass",
                     radius="full",
                     padding="0.65rem",
                 ),
-                rx.vstack( #para alinear horizontal
+                rx.vstack(  # para alinear verticalmente
                     rx.dialog.title(
-                        "Crear una nueva Referencia", # Se configura el titulo
+                        "Creación de una Nueva Referencia",  # Se configura el título
                         weight="bold",
                         margin="0",
                     ),
-                    rx.dialog.description(
-                        "Ingrese la información necesaria para la creación de una referencia", #Se configura la descripcion
-                    ),
+                    
                     spacing="1",
                     height="100%",
                     align_items="start",
@@ -76,79 +125,12 @@ def add_customer_button() -> rx.Component:
                 align_items="center",
                 width="100%",
             ),
-            rx.flex(  # Se utiliza para distribuir el contenido de manera flexible
-            rx.form.root(
-                rx.flex(
-                    rx.text("Elija el tipo de producto que quiere crear", weight="bold", size="lg", margin_bottom="0.5em"),  # Cierra las comillas y agrega la coma
-                    rx.radio(
-                        ["Rollo", "Bolsa", "Servicio"],
-                        name="status",
-                        direction="row",
-                        as_child=True,
-                        required=True,
-                            ),
-                        # Email
-                        form_field(
-                            "Email", "user@reflex.dev", "email", "email", "mail"
-                        ),
-                        # Phone
-                        form_field("Phone", "Customer Phone", "tel", "phone", "phone"),
-                        # Address
-                        form_field(
-                            "Address", "Customer Address", "text", "address", "home"
-                        ),
-                        # Payments
-                        form_field(
-                            "Payment ($)",
-                            "Customer Payment",
-                            "number",
-                            "payments",
-                            "dollar-sign",
-                        ),
-                        # Status
-                        rx.vstack(
-                            rx.hstack(
-                                rx.icon("truck", size=16, stroke_width=1.5),
-                                rx.text("Status"),
-                                align="center",
-                                spacing="2",
-                            ),
-                          
-                        ),
-                        direction="column",
-                        spacing="3",
-                    ),
-                    rx.flex(
-                        rx.dialog.close(
-                            rx.button(
-                                "Cancel",
-                                variant="soft",
-                                color_scheme="gray",
-                            ),
-                        ),
-                        rx.form.submit(
-                            rx.dialog.close(
-                                rx.button("Submit Customer"),
-                            ),
-                            as_child=True,
-                        ),
-                        padding_top="2em",
-                        spacing="3",
-                        mt="4",
-                        justify="end",
-                    ),
-                    on_submit=State.add_customer_to_db,
-                    reset_on_submit=False,
-                ),
-                width="100%",
-                direction="column",
-                spacing="4",
-            ),
+            base_form(),  # Llama al formulario base
             max_width="450px",
             padding="1.5em",
-            border=f"2px solid {rx.color('accent', 7)}",
+            border=f"2px solid {rx.color('accent', 7)}",  # Corrección en las comillas
             border_radius="25px",
-        ),
+        )
     )
 
 
@@ -161,7 +143,7 @@ def update_customer_dialog(user):
                 color_scheme="blue",
                 size="2",
                 variant="solid",
-                on_click=lambda: State.get_user(user),
+                on_click=lambda: States_pagina.get_user(user),
             ),
         ),
         rx.dialog.content(
@@ -278,7 +260,7 @@ def update_customer_dialog(user):
                         mt="4",
                         justify="end",
                     ),
-                    on_submit=State.update_customer_to_db,
+                    on_submit=States_pagina.update_customer_to_db,
                     reset_on_submit=False,
                 ),
                 width="100%",
@@ -310,27 +292,27 @@ def main_table():
             add_customer_button(),
             rx.spacer(),
             rx.cond(
-                State.sort_reverse,
+                States_pagina.sort_reverse,
                 rx.icon(
                     "arrow-down-z-a",
                     size=28,
                     stroke_width=1.5,
                     cursor="pointer",
-                    on_click=State.toggle_sort,
+                    on_click=States_pagina.toggle_sort,
                 ),
                 rx.icon(
                     "arrow-down-a-z",
                     size=28,
                     stroke_width=1.5,
                     cursor="pointer",
-                    on_click=State.toggle_sort,
+                    on_click=States_pagina.toggle_sort,
                 ),
             ),
             rx.select(
                 ["name", "email", "phone", "address", "payments", "date", "status"],
                 placeholder="Sort By: Name",
                 size="3",
-                on_change=lambda sort_value: State.sort_values(sort_value),
+                on_change=lambda sort_value: States_pagina.sort_values(sort_value),
             ),
             rx.input(
                 rx.input.slot(rx.icon("search")),
@@ -339,7 +321,7 @@ def main_table():
                 max_width="225px",
                 width="100%",
                 variant="surface",
-                on_change=lambda value: State.filter_values(value),
+                on_change=lambda value: States_pagina.filter_values(value),
             ),
             justify="end",
             align="center",
@@ -361,10 +343,10 @@ def main_table():
                     _header_cell("Actions", "cog"),
                 ),
             ),
-            rx.table.body(rx.foreach(State.users, show_customer)),
+            rx.table.body(rx.foreach(States_pagina.users, show_customer)),
             variant="surface",
             size="3",
             width="100%",
-            on_mount=State.load_entries,
+            on_mount=States_pagina.load_entries,
         ),
     )

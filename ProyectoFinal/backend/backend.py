@@ -2,7 +2,7 @@ import reflex as rx
 from typing import Union
 from sqlmodel import select, asc, desc, or_, func, cast, String
 from datetime import datetime
-
+from ..views.form_mapping import product_form_mapping
 
 def _get_percentage_change(value: Union[int, float], prev_value: Union[int, float]) -> float:
     percentage_change = (
@@ -14,7 +14,8 @@ def _get_percentage_change(value: Union[int, float], prev_value: Union[int, floa
         float("inf")
     )
     return percentage_change
-
+# Opciones para los tipos de producto
+product_types = ["Bolsa", "Rollo", "Rollo Proviagro", "Servicio"]
 
 class Customer(rx.Model, table=True):
     """The customer model."""
@@ -28,7 +29,7 @@ class Customer(rx.Model, table=True):
     status: str
 
 
-class State(rx.State):
+class States_pagina(rx.State):
     """The app state."""
 
     users: list[Customer] = []
@@ -36,6 +37,9 @@ class State(rx.State):
     sort_reverse: bool = False
     search_value: str = ""
     current_user: Customer = Customer()
+    selected_product_type: str = ""  # Agrega este atributo
+    selected_form: rx.Component = rx.text("Seleccione un tipo de producto.")
+    is_checked: bool = False
 
     def load_entries(self) -> list[Customer]:
         """Get all users from the database."""
@@ -63,7 +67,23 @@ class State(rx.State):
                 query = query.order_by(order)
 
             self.users = session.exec(query).all()
+    
+    def set_selected_product_type(self, selected_product_type: str):
+        """Actualizar el tipo de producto seleccionado y el formulario."""
+        self.selected_product_type = str(selected_product_type)  # Forzar conversión a string
+        # Buscar el formulario en el mapeo
+        self.selected_form = product_form_mapping.get(
+            str(selected_product_type), 
+            rx.text("Formulario no disponible mensaje del backend")  # Mensaje si no hay formulario
+        )
+        print(f"Producto seleccionado: {self.selected_product_type}"),
+        print(f"Tipo de dato de selected_product_type en el backend: {type(self.selected_product_type)}"),
+        print("Mapping de formularios:", product_form_mapping)
 
+
+    def set_is_checked(self, value:bool):
+        self.is_checked = value
+ 
     def sort_values(self, sort_value: str):
         self.sort_value = sort_value
         self.load_entries()
